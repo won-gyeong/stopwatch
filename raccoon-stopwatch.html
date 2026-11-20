@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>솜사탕 너구리 스탑워치</title>
+<style>
+  :root {
+    --bg:#fff3ea; --card:#ffffff; --text:#3a2f2a; --muted:#7a6a62; --line:#f0e1d6;
+    --pink:#c2185b; --pink-soft:#ffd6e6; --coral:#c0392b; --btn:#f3e6dc; --btn-text:#4a3b34;
+    --best:#17804f; --worst:#c0392b;
+    --sky1:#bfe6ff; --sky2:#f0f9ff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1d1a1f; --card:#2a252d; --text:#f6ece6; --muted:#b9a9a2; --line:#3b343f;
+      --btn:#3b343f; --btn-text:#f6ece6; --pink:#ff7aae; --pink-soft:#5a2d44; --coral:#ff7a72;
+      --best:#5fd49a; --worst:#ff8a7d; --sky1:#1c2748; --sky2:#46527f; }
+    .sun { fill:#f3efd2; } .hill { fill:#4b7a62; } .cloud { opacity:.3 !important; }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif; }
+  .card { width:min(440px,100%); background:var(--card); border-radius:28px; overflow:hidden;
+    box-shadow:0 14px 44px rgba(120,70,50,.16); }
+
+  /* ---------- 장면 ---------- */
+  .stage { position:relative; line-height:0; }
+  #scene { width:100%; height:auto; display:block; }
+  .sky-a { stop-color:var(--sky1); } .sky-b { stop-color:var(--sky2); }
+  .bubble { position:absolute; left:14%; top:4%; max-width:70%; line-height:1.3; padding:8px 12px;
+    background:#fff; color:#3a2f2a; border-radius:16px; font-size:14px; font-weight:700;
+    box-shadow:0 3px 10px rgba(0,0,0,.14); opacity:0; transform:translateY(6px) scale(.92);
+    transition:opacity .25s, transform .25s; pointer-events:none; }
+  .bubble.show { opacity:1; transform:none; }
+  .bubble::after { content:""; position:absolute; left:50px; bottom:-8px; border:8px solid transparent;
+    border-top-color:#fff; border-bottom:0; }
+
+  /* 장면 애니메이션 */
+  #scene * { transform-box:view-box; }
+  #wash { transform-origin:240px 212px; animation:wash .8s ease-in-out infinite; animation-play-state:paused; }
+  #scene.running #wash { animation-play-state:running; }
+  #scene.running.eating #wash { animation:eat 1s ease-in-out 1; }
+  #candy { transform-origin:240px 212px; transition:transform .12s linear, opacity .2s; }
+  #candySpin { transform-origin:240px 190px; }
+  #scene.spin #candySpin { animation:spin .9s ease-in-out 1; }
+  #candy.dropin { animation:dropin .9s cubic-bezier(.3,1.4,.5,1) 1; }
+  #head { animation:headbob .8s ease-in-out infinite; animation-play-state:paused; transform-origin:115px 170px; }
+  #scene.running #head { animation-play-state:running; }
+  #tail { transform-origin:92px 212px; animation:wag .8s ease-in-out infinite alternate; animation-play-state:paused; }
+  #scene.running #tail { animation-play-state:running; }
+  #body { transform-origin:115px 244px; animation:breathe 3.2s ease-in-out infinite; }
+  #scene.shrug #raccoon { animation:shrug 1.2s ease-in-out 1; transform-origin:115px 244px; }
+  .sclera { transform-origin:center; transform-box:fill-box !important; animation:blink 4.5s infinite; }
+  .ripple { opacity:0; transform-origin:240px 226px; }
+  #scene.running .ripple { animation:ripple 1.6s ease-out infinite; }
+  #scene.running .ripple.r2 { animation-delay:.8s; }
+  #drop { opacity:0; }
+  #scene.dripping #drop { animation:drip .8s ease-in 1; }
+  .cloud { animation:drift 40s linear infinite alternate; }
+  .bub { opacity:0; }
+  #scene.running .bub { animation:rise 2.6s ease-in infinite; }
+  #scene.running .bub.b2 { animation-delay:.9s; } #scene.running .bub.b3 { animation-delay:1.7s; }
+
+  @keyframes wash { 0%,100%{transform:translateY(-6px)} 50%{transform:translateY(20px)} }
+  @keyframes eat { 0%{transform:translate(0,0)} 28%{transform:translate(-84px,-20px) rotate(-4deg)}
+    38%{transform:translate(-84px,-20px) rotate(4deg)} 48%{transform:translate(-84px,-20px) rotate(-4deg)}
+    62%{transform:translate(-84px,-20px) rotate(3deg)} 100%{transform:translate(0,0)} }
+  @keyframes nibble { 0%,100%{transform:rotate(0)} 28%,65%{transform:rotate(9deg)} }
+  #scene.running.eating #head { animation:nibble 1s ease-in-out 1; }
+  #scene:not(.running) .cloud { animation-play-state:paused; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  @keyframes dropin { 0%{transform:translateY(-240px);opacity:0} 55%{transform:translateY(10px);opacity:1}
+    75%{transform:translateY(-8px)} 100%{transform:none;opacity:1} }
+  @keyframes headbob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(3px)} }
+  @keyframes wag { from{transform:rotate(-7deg)} to{transform:rotate(7deg)} }
+  @keyframes breathe { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(1.02)} }
+  @keyframes shrug { 0%,100%{transform:translateY(0)} 25%,70%{transform:translateY(6px) scaleY(.94)} }
+  @keyframes blink { 0%,94%,100%{transform:scaleY(1)} 97%{transform:scaleY(.1)} }
+  @keyframes ripple { 0%{transform:scale(.3);opacity:.7} 100%{transform:scale(1.6);opacity:0} }
+  @keyframes drip { 0%{transform:translateY(0);opacity:1} 100%{transform:translateY(34px);opacity:0} }
+  @keyframes drift { from{transform:translateX(-14px)} to{transform:translateX(18px)} }
+  @keyframes rise { 0%{transform:translateY(0);opacity:0} 15%{opacity:.8} 100%{transform:translateY(-26px);opacity:0} }
+  @keyframes chomp { 0%,100%{transform:scaleY(.4)} 50%{transform:scaleY(1.2)} }
+  .chomp { transform-origin:115px 153px; animation:chomp .22s ease-in-out infinite; }
+
+  /* 표정 */
+  .mood { display:none; }
+  #scene[data-mood="proud"] .m-proud, #scene[data-mood="worry"] .m-worry, #scene[data-mood="blank"] .m-blank,
+  #scene[data-mood="sad"] .m-sad, #scene[data-mood="eat"] .m-eat { display:inline; }
+
+  /* ---------- 시간/컨트롤 ---------- */
+  .panel { padding:18px 22px 22px; }
+  .time { text-align:center; font-size:clamp(52px,16vw,76px); font-weight:600; line-height:1.1;
+    font-variant-numeric:tabular-nums; letter-spacing:1px; }
+  .time small { font-size:.5em; font-weight:500; color:var(--muted); }
+  .gauge { display:flex; align-items:center; gap:10px; margin:12px 0 4px; font-size:12px; color:var(--muted); }
+  .bar { flex:1; height:8px; background:var(--pink-soft); border-radius:99px; overflow:hidden; }
+  .bar i { display:block; height:100%; width:100%; background:var(--pink); border-radius:99px; transition:width .1s linear; }
+  .count { text-align:center; font-size:13px; color:var(--muted); margin:6px 0 0; }
+  .btns { display:flex; gap:10px; margin:18px 0 14px; }
+  button { flex:1; min-height:52px; padding:0 8px; font:inherit; font-size:16px; font-weight:700; border:0;
+    border-radius:16px; cursor:pointer; background:var(--btn); color:var(--btn-text);
+    transition:transform .1s, opacity .2s; }
+  button:active:not(:disabled) { transform:scale(.96); }
+  button:disabled { opacity:.45; cursor:default; }
+  button:focus-visible, #raccoon:focus-visible { outline:3px solid var(--pink); outline-offset:2px; }
+  #start { flex:1.5; background:var(--pink); color:#fff; }
+  #start.running { background:var(--coral); }
+  @media (prefers-color-scheme: dark) { #start { color:#2a252d; } }
+
+  .laps { max-height:190px; overflow-y:auto; margin:0; padding:0; list-style:none; }
+  .lap, .lap-head { display:grid; grid-template-columns:44px 1fr 88px 44px; gap:8px; align-items:center;
+    padding:9px 4px; border-top:1px solid var(--line); font-size:14px; font-variant-numeric:tabular-nums; }
+  .lap-head { border-top:0; padding:2px 4px; font-size:12px; color:var(--muted); }
+  .lap-head span:nth-child(3), .lap .tt { text-align:right; }
+  .lap .n { color:var(--muted); }
+  .lap .sp { font-weight:700; }
+  .lap .tag { font-size:12px; font-weight:700; text-align:right; }
+  .lap.best .tag, .lap.best .sp { color:var(--best); } .lap.worst .tag, .lap.worst .sp { color:var(--worst); }
+  .lap .tt { color:var(--muted); }
+  .empty { text-align:center; color:var(--muted); font-size:13px; padding:10px 0 2px; }
+  .hint { margin-top:12px; text-align:center; font-size:12px; color:var(--muted); }
+  .sr { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="stage">
+    <svg id="scene" viewBox="0 24 400 256" data-mood="proud" role="img"
+         aria-label="솜사탕을 개울물에 씻는 너구리 그림">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" class="sky-a"/><stop offset="1" class="sky-b"/>
+        </linearGradient>
+        <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#7cc8ee"/><stop offset="1" stop-color="#4fa6d8"/>
+        </linearGradient>
+        <clipPath id="tailClip"><ellipse cx="60" cy="205" rx="38" ry="21"/></clipPath>
+      </defs>
+
+      <rect width="400" height="280" fill="url(#sky)"/>
+      <circle class="sun" cx="345" cy="58" r="24" fill="#ffe39a"/>
+      <g class="cloud" fill="#fff" opacity=".9"><ellipse cx="250" cy="52" rx="34" ry="12"/><ellipse cx="274" cy="44" rx="22" ry="12"/><ellipse cx="228" cy="46" rx="20" ry="10"/></g>
+      <g class="cloud" fill="#fff" opacity=".75" style="animation-duration:55s"><ellipse cx="330" cy="100" rx="28" ry="9"/><ellipse cx="348" cy="94" rx="16" ry="9"/></g>
+      <path class="hill" d="M0 200 Q80 170 170 196 T400 190 V230 H0Z" fill="#a9dba0"/>
+
+      <!-- 물 -->
+      <rect y="222" width="400" height="58" fill="url(#water)"/>
+
+      <!-- 바위 -->
+      <ellipse cx="112" cy="238" rx="78" ry="26" fill="#b6b2ad"/>
+      <ellipse cx="96" cy="230" rx="40" ry="10" fill="#cdc9c3"/>
+
+      <!-- 너구리 -->
+      <g id="raccoon" role="button" tabindex="0" aria-label="너구리 쓰다듬기" style="cursor:pointer">
+        <g id="tail">
+          <g transform="rotate(-25 60 205)">
+            <ellipse cx="60" cy="205" rx="38" ry="21" fill="#9aa1ab"/>
+            <g clip-path="url(#tailClip)" fill="#3b4048">
+              <rect x="38" y="185" width="8" height="40"/><rect x="56" y="185" width="8" height="40"/><rect x="74" y="185" width="8" height="40"/>
+              <rect x="88" y="185" width="14" height="40"/>
+            </g>
+          </g>
+        </g>
+        <g id="body">
+          <ellipse cx="115" cy="200" rx="48" ry="44" fill="#9aa1ab"/>
+          <ellipse cx="118" cy="208" rx="30" ry="30" fill="#ece7dd"/>
+          <ellipse cx="94" cy="238" rx="14" ry="7" fill="#3b4048"/><ellipse cx="136" cy="240" rx="14" ry="7" fill="#3b4048"/>
+        </g>
+        <g id="head">
+          <circle cx="82" cy="92" r="15" fill="#3b4048"/><circle cx="82" cy="95" r="7" fill="#f2b8c6"/>
+          <circle cx="148" cy="92" r="15" fill="#3b4048"/><circle cx="148" cy="95" r="7" fill="#f2b8c6"/>
+          <ellipse cx="115" cy="128" rx="52" ry="42" fill="#9aa1ab"/>
+          <ellipse cx="115" cy="98" rx="6" ry="12" fill="#3b4048" opacity=".85"/>
+          <ellipse cx="115" cy="142" rx="32" ry="23" fill="#f4f1ea"/>
+          <ellipse cx="91" cy="125" rx="19" ry="13" transform="rotate(-14 91 125)" fill="#2c3036"/>
+          <ellipse cx="139" cy="125" rx="19" ry="13" transform="rotate(14 139 125)" fill="#2c3036"/>
+          <ellipse cx="115" cy="141" rx="7" ry="5" fill="#2c3036"/>
+
+          <!-- 뿌듯 -->
+          <g class="mood m-proud">
+            <g class="sclera"><circle cx="93" cy="124" r="6" fill="#fff"/><circle cx="137" cy="124" r="6" fill="#fff"/></g>
+            <circle cx="94" cy="125" r="3.4" fill="#1d1f23"/><circle cx="138" cy="125" r="3.4" fill="#1d1f23"/>
+            <circle cx="95" cy="123.5" r="1.2" fill="#fff"/><circle cx="139" cy="123.5" r="1.2" fill="#fff"/>
+            <path d="M104 150 Q115 161 126 150" fill="none" stroke="#2c3036" stroke-width="2.6" stroke-linecap="round"/>
+            <ellipse cx="78" cy="143" rx="6" ry="3.5" fill="#ff9fb8" opacity=".7"/><ellipse cx="152" cy="143" rx="6" ry="3.5" fill="#ff9fb8" opacity=".7"/>
+          </g>
+          <!-- 당황 -->
+          <g class="mood m-worry">
+            <circle cx="93" cy="124" r="6" fill="#fff"/><circle cx="137" cy="124" r="6" fill="#fff"/>
+            <circle cx="94" cy="126" r="3.4" fill="#1d1f23"/><circle cx="138" cy="126" r="3.4" fill="#1d1f23"/>
+            <path d="M83 110 L102 114 M147 110 L128 114" stroke="#f4f1ea" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M105 154 Q110 149 115 154 T125 154" fill="none" stroke="#2c3036" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M160 108 q6 9 0 13 q-6 -4 0 -13z" fill="#9fdcff"/>
+          </g>
+          <!-- 멍 -->
+          <g class="mood m-blank">
+            <circle cx="93" cy="124" r="7" fill="#fff"/><circle cx="137" cy="124" r="7" fill="#fff"/>
+            <circle cx="93" cy="124" r="1.8" fill="#1d1f23"/><circle cx="137" cy="124" r="1.8" fill="#1d1f23"/>
+            <ellipse cx="115" cy="154" rx="3.6" ry="4.6" fill="#2c3036"/>
+          </g>
+          <!-- 시무룩 -->
+          <g class="mood m-sad">
+            <circle cx="93" cy="125" r="6" fill="#fff"/><circle cx="137" cy="125" r="6" fill="#fff"/>
+            <circle cx="93" cy="127" r="3.4" fill="#1d1f23"/><circle cx="137" cy="127" r="3.4" fill="#1d1f23"/>
+            <path d="M83 114 L102 110 M147 114 L128 110" stroke="#f4f1ea" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M105 158 Q115 148 125 158" fill="none" stroke="#2c3036" stroke-width="2.6" stroke-linecap="round"/>
+            <path d="M90 134 q-4 9 0 12 q4 -3 0 -12z M140 134 q-4 9 0 12 q4 -3 0 -12z" fill="#9fdcff"/>
+          </g>
+          <!-- 냠냠 -->
+          <g class="mood m-eat">
+            <circle cx="93" cy="124" r="7.5" fill="#fff"/><circle cx="137" cy="124" r="7.5" fill="#fff"/>
+            <circle cx="94" cy="125" r="3.4" fill="#1d1f23"/><circle cx="138" cy="125" r="3.4" fill="#1d1f23"/>
+            <ellipse class="chomp" cx="115" cy="153" rx="9" ry="6" fill="#7a2d3e"/>
+          </g>
+        </g>
+      </g>
+
+      <!-- 팔: 어깨에 고정, 끝은 앞발을 따라감 (JS가 d 갱신) -->
+      <path id="armB" fill="none" stroke="#858c96" stroke-width="14" stroke-linecap="round" d="M146 208 Q180 226 210 223"/>
+      <path id="armF" fill="none" stroke="#9aa1ab" stroke-width="16" stroke-linecap="round" d="M152 196 Q178 216 198 227"/>
+      <!-- 솜사탕 + 앞발 -->
+      <g id="candyDrop"><g id="wash">
+        <line x1="198" y1="228" x2="240" y2="200" stroke="#c9a36b" stroke-width="5" stroke-linecap="round"/>
+        <g id="candy"><g id="candySpin">
+          <circle cx="240" cy="185" r="25" fill="#ff9ccc"/><circle cx="220" cy="193" r="19" fill="#ff9ccc"/>
+          <circle cx="260" cy="193" r="19" fill="#ff9ccc"/><circle cx="231" cy="168" r="16" fill="#ff9ccc"/>
+          <circle cx="252" cy="168" r="16" fill="#ff9ccc"/><circle cx="240" cy="202" r="15" fill="#ff9ccc"/>
+          <circle cx="232" cy="176" r="9" fill="#ffc9e3" opacity=".9"/><circle cx="256" cy="188" r="7" fill="#ffc9e3" opacity=".9"/>
+          <circle cx="222" cy="194" r="6" fill="#ffc9e3" opacity=".9"/>
+        </g></g>
+        <circle cx="198" cy="227" r="9.5" fill="#3b4048"/><circle cx="210" cy="223" r="9.5" fill="#3b4048"/>
+      </g></g>
+
+      <!-- 물 앞면 -->
+      <rect y="222" width="400" height="58" fill="#4fa6d8" opacity=".35"/>
+      <rect id="tint" y="222" width="400" height="58" fill="#ff6fae" opacity=".1" style="transition:opacity .5s"/>
+      <path d="M0 224 Q25 219 50 224 T100 224 T150 224 T200 224 T250 224 T300 224 T350 224 T400 224" fill="none" stroke="#fff" stroke-width="2" opacity=".6"/>
+      <ellipse class="ripple" cx="240" cy="228" rx="46" ry="8" fill="none" stroke="#fff" stroke-width="2"/>
+      <ellipse class="ripple r2" cx="240" cy="228" rx="46" ry="8" fill="none" stroke="#fff" stroke-width="2"/>
+      <circle class="bub" cx="226" cy="246" r="3" fill="#fff"/><circle class="bub b2" cx="252" cy="250" r="2.5" fill="#fff"/><circle class="bub b3" cx="240" cy="256" r="2" fill="#fff"/>
+      <path id="drop" d="M240 212 q6 10 0 15 q-6 -5 0 -15z" fill="#ffb3d4"/>
+      <g fill="#6bbf5e"><path d="M300 280 l5 -22 l5 22z M312 280 l4 -16 l4 16z M20 280 l5 -18 l5 18z"/></g>
+    </svg>
+    <div class="bubble" id="bubble" aria-hidden="true"></div>
+  </div>
+
+  <section class="panel">
+    <div class="time" id="time" role="timer" aria-live="off" aria-label="경과 시간">00:00<small>.00</small></div>
+    <div class="gauge"><span>솜사탕</span>
+      <div class="bar" role="progressbar" aria-label="솜사탕 남은 양" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" id="barWrap"><i id="bar"></i></div>
+      <span id="barTxt">60초</span></div>
+    <p class="count" id="count">아직 녹은 솜사탕이 없어요</p>
+
+    <div class="btns">
+      <button id="lap" disabled>랩</button>
+      <button id="start">시작</button>
+      <button id="reset" disabled>초기화</button>
+    </div>
+
+    <div class="lap-head" id="lapHead" hidden><span>랩</span><span>구간</span><span>누적</span><span></span></div>
+    <ul class="laps" id="laps" aria-label="랩 기록"></ul>
+    <div class="empty" id="empty">랩을 누르면 너구리가 솜사탕을 한 입 먹어요</div>
+    <div class="hint">Space 시작/정지 · L 랩 · R 초기화 · 너구리를 눌러 보세요</div>
+  </section>
+  <div class="sr" id="sr" role="status" aria-live="polite"></div>
+</main>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const scene = $('scene'), CYCLE = 60000;
+  let elapsed = 0, startAt = 0, raf = null, laps = [], cycle = 0;
+  let moodLock = false, candyHidden = false, eatT = null, resetT = null, bubbleT = null;
+  let biteF = 1, vanishSaid = false, lastBase = 'proud', lastTime = '';
+
+  const isRunning = () => raf !== null;
+  const now = () => elapsed + (isRunning() ? performance.now() - startAt : 0);
+  const pad = n => String(n).padStart(2, '0');
+  const fmt = ms => { const t = Math.floor(ms / 10), cs = t % 100, s = Math.floor(t / 100) % 60,
+    m = Math.floor(t / 6000) % 60, h = Math.floor(t / 360000);
+    return { main:(h ? pad(h) + ':' : '') + pad(m) + ':' + pad(s), cs:'.' + pad(cs) }; };
+  const txt = ms => { const f = fmt(ms); return f.main + f.cs; };
+  const spoken = ms => { const t = Math.floor(ms / 10), s = Math.floor(t / 100), cs = t % 100;
+    return `${Math.floor(s / 60) ? Math.floor(s / 60) + '분 ' : ''}${s % 60}.${pad(cs)}초`; };
+
+  const restart = (el, cls) => { el.classList.remove(cls); void el.getBoundingClientRect(); el.classList.add(cls); };
+  const announce = m => { $('sr').textContent = m; };
+  const setMood = m => { scene.dataset.mood = m; };
+  function say(msg, ms = 1800) {
+    const b = $('bubble'); b.textContent = msg; b.classList.add('show');
+    clearTimeout(bubbleT); bubbleT = setTimeout(() => b.classList.remove('show'), ms);
+  }
+  const baseMood = (t, p) => (t === 0 || 1 - p > .6) ? 'proud' : (1 - p > .25 ? 'worry' : 'blank');
+
+  function render() {
+    const t = now(), f = fmt(t), cyc = Math.floor(t / CYCLE), p = (t % CYCLE) / CYCLE;
+    const ts = f.main + f.cs;
+    if (ts !== lastTime) { lastTime = ts; $('time').innerHTML = f.main + '<small>' + f.cs + '</small>'; }
+    if (cyc > cycle) {
+      cycle = cyc; biteF = 1; vanishSaid = false; restart($('candy'), 'dropin'); say('새 솜사탕이 내려왔다!');
+      announce(`솜사탕이 모두 녹았어요. 새 솜사탕이 내려와요. 지금까지 ${cycle}개`);
+    }
+    const remain = 1 - p;
+    if (!candyHidden) {
+      $('candy').style.transform = `scale(${Math.max(remain * biteF, 0).toFixed(3)})`;
+      $('candy').style.opacity = Math.min(1, remain * 5).toFixed(2);
+    }
+    $('tint').style.opacity = Math.min(.7, .1 + .4 * p + .05 * Math.min(cycle, 4)).toFixed(2);
+    $('bar').style.width = (remain * 100).toFixed(1) + '%';
+    const left = Math.ceil(remain * 60);
+    $('barTxt').textContent = left + '초';
+    $('barWrap').setAttribute('aria-valuenow', Math.round(remain * 100));
+    $('count').textContent = cycle ? `녹아 없어진 솜사탕 ${cycle}개` : '아직 녹은 솜사탕이 없어요';
+    const bm = baseMood(t, p);
+    if (!moodLock) setMood(bm);
+    if (isRunning() && bm !== lastBase) { if (bm === 'worry') say('어, 줄어드는데…?'); else if (bm === 'blank') say('…'); }
+    lastBase = bm;
+    if (isRunning() && remain < .07 && !vanishSaid) { vanishSaid = true; say('어…? 솜사탕 어디 갔지?', 2200); }
+    document.title = isRunning() ? `${f.main} · 솜사탕 너구리` : '솜사탕 너구리 스탑워치';
+  }
+  const loop = () => { render(); raf = requestAnimationFrame(loop); };
+
+  function finishReset() {
+    if (resetT === null) return;
+    clearTimeout(resetT); resetT = null;
+    scene.classList.remove('shrug'); candyHidden = false; moodLock = false;
+    render(); restart($('candy'), 'dropin'); say('새 솜사탕이다!');
+  }
+
+  function toggle() {
+    if (isRunning()) {
+      elapsed += performance.now() - startAt; cancelAnimationFrame(raf); raf = null;
+      scene.classList.remove('running'); restart(scene, 'dripping');
+      $('start').textContent = '시작'; $('start').classList.remove('running');
+      $('lap').disabled = true; $('reset').disabled = false; render();
+      say('앗, 멈췄다!'); announce(`정지. ${spoken(elapsed)}`);
+    } else {
+      finishReset();
+      startAt = performance.now(); raf = requestAnimationFrame(loop);
+      scene.classList.add('running');
+      $('start').textContent = '정지'; $('start').classList.add('running');
+      $('lap').disabled = false; $('reset').disabled = true;
+      say(elapsed === 0 ? '쓱싹쓱싹!' : '다시 쓱싹!'); announce('시작');
+    }
+  }
+
+  function lap() {
+    if (!isRunning()) return;
+    const total = now(), prev = laps.length ? laps[laps.length - 1].total : 0;
+    laps.push({ total, split: total - prev }); renderLaps(); biteF = Math.max(.5, biteF * .88);
+    announce(`랩 ${laps.length}, ${spoken(total - prev)}`);
+    if (eatT === null) {
+      scene.classList.add('eating'); moodLock = true; setMood('eat');
+      const p = (total % CYCLE) / CYCLE;
+      let msg = 1 - p < .3 ? '냠! …어? 어디 갔지?' : ['냠!', '달다 달아!', '한 입만!'][laps.length % 3];
+      if (laps.length > 1) {
+        const sp = laps.map(l => l.split), cur = sp[sp.length - 1], others = sp.slice(0, -1);
+        if (cur < Math.min(...others)) msg = '신기록! 이번엔 안 녹았다!';
+        else if (cur > Math.max(...others)) msg = '이번 랩은 다 녹았어…';
+      }
+      say(msg);
+      eatT = setTimeout(() => { eatT = null; scene.classList.remove('eating'); moodLock = false; render(); }, 1000);
+    }
+  }
+
+  function reset() {
+    if (isRunning() || elapsed === 0 && !laps.length) return;
+    elapsed = 0; laps = []; cycle = 0; renderLaps();
+    clearTimeout(eatT); eatT = null; scene.classList.remove('eating');
+    biteF = 1; vanishSaid = false; lastBase = 'proud'; lastTime = '';
+    moodLock = true; candyHidden = true; setMood('sad');
+    $('candy').style.opacity = 0; $('time').innerHTML = '00:00<small>.00</small>';
+    $('bar').style.width = '100%'; $('barTxt').textContent = '60초'; $('tint').style.opacity = .15;
+    $('count').textContent = '아직 녹은 솜사탕이 없어요'; $('reset').disabled = true;
+    restart(scene, 'shrug'); say('어…? 어디 갔지?', 1300); announce('초기화');
+    resetT = setTimeout(finishReset, 1300);
+  }
+
+  function renderLaps() {
+    const ul = $('laps'); ul.innerHTML = ''; $('empty').style.display = laps.length ? 'none' : '';
+    $('lapHead').hidden = !laps.length;
+    const sp = laps.map(l => l.split), best = Math.min(...sp), worst = Math.max(...sp), tag = laps.length > 1 && best !== worst;
+    laps.forEach((l, i) => {
+      const li = document.createElement('li');
+      const isBest = tag && l.split === best, isWorst = tag && l.split === worst;
+      li.className = 'lap' + (isBest ? ' best' : isWorst ? ' worst' : '');
+      li.innerHTML = `<span class="n">랩 ${i + 1}</span><span class="sp">${txt(l.split)}</span>` +
+        `<span class="tt">${txt(l.total)}</span><span class="tag">${isBest ? '최단' : isWorst ? '최장' : ''}</span>`;
+      ul.prepend(li);
+    });
+  }
+
+  function pet() {
+    restart(scene, 'spin');
+    say(['나 안 녹일 거야!', '이건 내 거야!', '안 뺏어 먹을 거지?'][Math.floor(Math.random() * 3)]);
+  }
+
+  const press = fn => e => { if (e.detail) e.currentTarget.blur(); fn(); };
+  $('start').onclick = press(toggle); $('lap').onclick = press(lap); $('reset').onclick = press(reset);
+  $('raccoon').addEventListener('click', pet);
+  $('raccoon').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); pet(); } });
+  document.addEventListener('keydown', e => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.code === 'Space') { if (e.target.tagName === 'BUTTON') return; e.preventDefault(); toggle(); }
+    else if (e.repeat) return;
+    else if (e.code === 'KeyL') lap();
+    else if (e.code === 'KeyR') reset();
+  });
+  // 팔 연결: #wash의 현재 변형을 읽어 앞발 위치를 구하고, 어깨~앞발을 곡선으로 잇는다
+  const wash = $('wash'), armF = $('armF'), armB = $('armB'); let lastTf = '';
+  function drawArm(el, s, paw, m, bulge) {
+    const q = m.transformPoint(new DOMPoint(paw[0] - 240, paw[1] - 212)), ex = q.x + 240, ey = q.y + 212;
+    el.setAttribute('d', `M${s[0]} ${s[1]} Q${(s[0] + ex) / 2} ${(s[1] + ey) / 2 + bulge} ${ex} ${ey}`);
+  }
+  (function armLoop() {
+    const tf = getComputedStyle(wash).transform;
+    if (tf !== lastTf) {
+      lastTf = tf; const m = tf === 'none' ? new DOMMatrix() : new DOMMatrix(tf);
+      drawArm(armF, [152, 196], [198, 227], m, 16); drawArm(armB, [146, 208], [210, 223], m, 12);
+    }
+    requestAnimationFrame(armLoop);
+  })();
+
+  renderLaps(); render();
+})();
+</script>
+</body>
+</html>
